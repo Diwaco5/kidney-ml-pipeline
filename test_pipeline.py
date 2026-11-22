@@ -58,3 +58,32 @@ def test_end_to_end_train_and_predict(tmp_path):
     })
     assert 0.0 <= res["ckd_probability"] <= 1.0
     assert res["prediction"] in (0, 1)
+
+
+def test_api_health_and_predict():
+    from fastapi.testclient import TestClient
+    from src.api import app
+
+    with TestClient(app) as client:
+        health = client.get("/health")
+        assert health.status_code == 200
+        assert health.json()["model_loaded"] is True
+
+        resp = client.post(
+            "/predict",
+            json={
+                "Creatinine": 2.9,
+                "BUN": 42.0,
+                "Urine_Output": 850.0,
+                "Diabetes": 1,
+                "Hypertension": 1,
+                "Age": 62.0,
+                "Protein_in_Urine": 1.8,
+                "Water_Intake": 1.5,
+                "Medication": "None",
+            },
+        )
+        assert resp.status_code == 200
+        body = resp.json()
+        assert 0.0 <= body["ckd_probability"] <= 1.0
+        assert body["prediction"] in (0, 1)
